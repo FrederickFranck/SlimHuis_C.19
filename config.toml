@@ -1,0 +1,5 @@
+title = "smarthome gpio configuratie"
+
+[GPIO]
+Buttons = [2, 3, 4, 17]
+Relays = [14, 15, 18, 23]

@@ -1,0 +1,10 @@
+{
+    "type": "sftp",
+    "host": "192.168.0.137",
+    "username": "pi",
+    "password": "frederick",
+    "port": 22,
+    "remotePath": "/home/pi/Documents/build2/",
+    "uploadOnSave": true,
+    "uploadConfigFile": true
+}
