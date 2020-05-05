@@ -6,7 +6,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -40,14 +40,13 @@ def initialize_buttons():
     for pin in BUTTON_PINS:
         buttons.append(Button(pin=pin))
         press_count.append(0)
-    for i in range(len(buttons)):
-        buttons[i].when_pressed = button_is_pressed
+    for btn in buttons:
+        btn.when_pressed = button_is_pressed
 
 
 # Event handler functie voor als de knop ingedrukt wordt
 def button_is_pressed(button):
     global press_count
-    print("pressed {}".format(button))
     press_count[buttons.index(button)] += 1
 
 
@@ -68,7 +67,7 @@ def check_relay(relay):
 def check_button(index):
     button = buttons[index]
     relay = relays[index]
-    timeout = 2
+    timeout = 1.5
     global press_count
     press_count[index] = 0
     if(button.is_pressed):
@@ -76,41 +75,56 @@ def check_button(index):
         while(button.is_pressed):
             # Als de knop voor langer dan een halve seconde ingedrukt blijft
             if((get_elapsed_seconds(start_time)) >= 0.5):
-                print("seconds" + str((get_elapsed_seconds(start_time))))
-                print("Held {0} for {1}".format(button, relay))
-                new_thread = threading.Thread(target=update_relay,
-                                              args=(relay, ButtonState.HOLD,),
-                                              daemon=True)
+                print("Hold")
+
+                new_thread = threading.Thread(
+                                            target=update_relay,
+                                            args=(relay, ButtonState.HOLD,),
+                                            daemon=True,
+                                            name=("hold {}".format(relay.pin)))
+
                 new_thread.start()
                 return ButtonState.HOLD
 
         # Timout waarin de knop 2 of 3 keer ingedrukt kan worden
         while((get_elapsed_seconds(start_time)) < timeout):
             if(press_count[index] == 3):
-                print("thrice  {0} for {1}".format(button, relay))
-                new_thread = threading.Thread(target=update_relay,
-                                              args=(relay,
-                                                    ButtonState.TRIPLE_PRESS,),
-                                              daemon=True)
+                print("Triple Press")
+
+                new_thread = threading.Thread(
+                                    target=update_relay,
+                                    args=(relay, ButtonState.TRIPLE_PRESS,),
+                                    daemon=True,
+                                    name=("triple press {}".format(relay.pin)))
+
                 new_thread.start()
                 return ButtonState.TRIPLE_PRESS
+
         if(((get_elapsed_seconds(start_time)) >= timeout)):
             if(press_count[index] == 1):
-                print("once  {0} for {1}".format(button, relay))
-                new_thread = threading.Thread(target=update_relay,
-                                              args=(relay,
-                                                    ButtonState.SINGLE_PRESS,),
-                                              daemon=True)
+                print("One Press")
+
+                new_thread = threading.Thread(
+                                    target=update_relay,
+                                    args=(relay, ButtonState.SINGLE_PRESS,),
+                                    daemon=True,
+                                    name=("one press {}".format(relay.pin)))
+
                 new_thread.start()
                 return ButtonState.SINGLE_PRESS
+
             if(press_count[index] == 2):
-                print("twice  {0} for {1}".format(button, relay))
-                new_thread = threading.Thread(target=update_relay,
-                                              args=(relay,
-                                                    ButtonState.DOUBLE_PRESS,),
-                                              daemon=True)
+                print("Double Press")
+
+                new_thread = threading.Thread(
+                                    target=update_relay,
+                                    args=(relay, ButtonState.DOUBLE_PRESS,),
+                                    daemon=True,
+                                    name=("double press {}".format(relay.pin)))
+
                 new_thread.start()
                 return ButtonState.DOUBLE_PRESS
+
     return ButtonState.NOT_PRESSED
 
 
@@ -119,13 +133,16 @@ def update_relay(relay, button_state):
     if(button_state == ButtonState.SINGLE_PRESS):
         toggle_relay(relay)
         return
+
     if(check_relay(relay)):  # relay is on
         if(button_state == ButtonState.DOUBLE_PRESS):
             switch_all_off()
             return
+
         elif(button_state == ButtonState.TRIPLE_PRESS):
             temporary_toggle_all(10)
             return
+
         elif(button_state == ButtonState.HOLD):
             temporary_toggle_relay(relay, 10)
             return
@@ -133,9 +150,11 @@ def update_relay(relay, button_state):
         if(button_state == ButtonState.DOUBLE_PRESS):
             switch_all_on()
             return
+
         elif(button_state == ButtonState.TRIPLE_PRESS):
             temporary_toggle_all(25, True, 5)
             return
+
         elif(button_state == ButtonState.HOLD):
             temporary_toggle_relay(relay, 25, True, 5)
             return
@@ -163,7 +182,7 @@ def temporary_toggle_relay(relay, seconds, warning=False, warning_time=0):
     start_time = now()
     while(get_elapsed_seconds(start_time) <= seconds):
         pass
-    if(warning):
+    if(warning and check_relay(relay)):
         blink(relay, warning_time)
     relay.off()
 
@@ -172,8 +191,11 @@ def temporary_toggle_relay(relay, seconds, warning=False, warning_time=0):
 # de relays na de opgegeven tijd een aantal seconden knipperen
 def temporary_toggle_all(seconds, warning=False, warning_time=0):
     for relay in relays:
-        new_thread = threading.Thread(target=temporary_toggle_relay, args=(
-            relay, seconds, warning, warning_time,), daemon=True)
+        new_thread = threading.Thread(
+                target=temporary_toggle_relay,
+                args=(relay, seconds, warning, warning_time),
+                daemon=True, name='all on {}'.format(relay.pin))
+
         new_thread.start()
 
 
@@ -213,6 +235,8 @@ def main():
     try:
         initialize_buttons()
         initialize_relays()
+        for t in threading.enumerate():
+            print(t.name)
         loop()
     except KeyboardInterrupt:
         exit()
