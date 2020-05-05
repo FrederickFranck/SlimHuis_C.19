@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 '''
 Met dit programma kan je relays bedienen via drukknoppen
 De GPIO pins waar de knoppen en de relais zijn aangesloten geef je op in
@@ -6,7 +7,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -235,8 +236,6 @@ def main():
     try:
         initialize_buttons()
         initialize_relays()
-        for t in threading.enumerate():
-            print(t.name)
         loop()
     except KeyboardInterrupt:
         exit()
