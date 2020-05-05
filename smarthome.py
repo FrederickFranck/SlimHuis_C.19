@@ -6,7 +6,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -16,6 +16,7 @@ from enum import Enum
 from gpiozero import DigitalOutputDevice
 from gpiozero import Button
 import toml
+import threading
 
 
 # GPIO PINS LADEN UIT DE CONFIG
@@ -29,9 +30,8 @@ buttons = []
 relays = []
 
 # COUNTER
-# Ik ga er van uit dat knoppen niet tegelijk ingedrukt worden
-# als dit wel zo is moet er voor elke knop een aparte counter komen
-press_count = 0
+# een lijst die voor elke knop het aantal knop drukken gaat bijhouden
+press_count = []
 
 
 # Maak een lijst aan met buttons en stelt de event handler functie in
@@ -39,16 +39,16 @@ def initialize_buttons():
     global buttons
     for pin in BUTTON_PINS:
         buttons.append(Button(pin=pin))
-    for btn in buttons:
-        btn.when_pressed = button_is_pressed
+        press_count.append(0)
+    for i in range(len(buttons)):
+        buttons[i].when_pressed = button_is_pressed
 
 
 # Event handler functie voor als de knop ingedrukt wordt
-# Ik ga er van uit dat knoppen niet tegelijk ingedrukt worden
-# als dit wel zo is moet er voor elke knop een aparte counter komen
 def button_is_pressed(button):
-    global counter
-    counter += 1
+    global press_count
+    print("pressed {}".format(button))
+    press_count[buttons.index(button)] += 1
 
 
 # Maak een lijst aan met Relays
@@ -65,54 +65,80 @@ def check_relay(relay):
 
 
 # Geeft de staat van de button terug
-def check_button(button):
+def check_button(index):
+    button = buttons[index]
+    relay = relays[index]
     timeout = 2
-    global counter
-    counter = 0
+    global press_count
+    press_count[index] = 0
     if(button.is_pressed):
         start_time = now()
         while(button.is_pressed):
             # Als de knop voor langer dan een halve seconde ingedrukt blijft
             if((get_elapsed_seconds(start_time)) >= 0.5):
                 print("seconds" + str((get_elapsed_seconds(start_time))))
-                print("hold")
+                print("Held {0} for {1}".format(button, relay))
+                new_thread = threading.Thread(target=update_relay,
+                                              args=(relay, ButtonState.HOLD,),
+                                              daemon=True)
+                new_thread.start()
                 return ButtonState.HOLD
 
         # Timout waarin de knop 2 of 3 keer ingedrukt kan worden
         while((get_elapsed_seconds(start_time)) < timeout):
-            if(counter == 3):
-                print("tripel")
+            if(press_count[index] == 3):
+                print("thrice  {0} for {1}".format(button, relay))
+                new_thread = threading.Thread(target=update_relay,
+                                              args=(relay,
+                                                    ButtonState.TRIPLE_PRESS,),
+                                              daemon=True)
+                new_thread.start()
                 return ButtonState.TRIPLE_PRESS
         if(((get_elapsed_seconds(start_time)) >= timeout)):
-            if(counter == 1):
-                print("once")
+            if(press_count[index] == 1):
+                print("once  {0} for {1}".format(button, relay))
+                new_thread = threading.Thread(target=update_relay,
+                                              args=(relay,
+                                                    ButtonState.SINGLE_PRESS,),
+                                              daemon=True)
+                new_thread.start()
                 return ButtonState.SINGLE_PRESS
-            if(counter == 2):
-                print("twice")
+            if(press_count[index] == 2):
+                print("twice  {0} for {1}".format(button, relay))
+                new_thread = threading.Thread(target=update_relay,
+                                              args=(relay,
+                                                    ButtonState.DOUBLE_PRESS,),
+                                              daemon=True)
+                new_thread.start()
                 return ButtonState.DOUBLE_PRESS
     return ButtonState.NOT_PRESSED
 
 
 # Past de relay aan adhv de staat van de knop
-def update_relay(relay, button):
-    button_state = check_button(button)
+def update_relay(relay, button_state):
     if(button_state == ButtonState.SINGLE_PRESS):
         toggle_relay(relay)
+        return
     if(check_relay(relay)):  # relay is on
         if(button_state == ButtonState.DOUBLE_PRESS):
             switch_all_off()
+            return
         elif(button_state == ButtonState.TRIPLE_PRESS):
             temporary_toggle_all(10)
+            return
         elif(button_state == ButtonState.HOLD):
             temporary_toggle_relay(relay, 10)
-
+            return
     else:                    # relay is off
         if(button_state == ButtonState.DOUBLE_PRESS):
             switch_all_on()
+            return
         elif(button_state == ButtonState.TRIPLE_PRESS):
             temporary_toggle_all(25, True, 5)
+            return
         elif(button_state == ButtonState.HOLD):
             temporary_toggle_relay(relay, 25, True, 5)
+            return
 
 
 # Geeft de huidige tijd als datetime object terug
@@ -146,7 +172,9 @@ def temporary_toggle_relay(relay, seconds, warning=False, warning_time=0):
 # de relays na de opgegeven tijd een aantal seconden knipperen
 def temporary_toggle_all(seconds, warning=False, warning_time=0):
     for relay in relays:
-        temporary_toggle_relay(relay, seconds, warning, warning_time)
+        new_thread = threading.Thread(target=temporary_toggle_relay, args=(
+            relay, seconds, warning, warning_time,), daemon=True)
+        new_thread.start()
 
 
 # Knippert een relay voor een aantal seconden
@@ -176,8 +204,8 @@ def switch_all_off():
 # en bestuurt de relays volgens de flowchart
 def loop():
     while True:
-        for button, relay in zip(buttons, relays):
-            update_relay(relay, button)
+        for index in range(len(buttons)):
+            check_button(index)
 
 
 # Main functie
