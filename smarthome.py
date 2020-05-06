@@ -7,7 +7,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -17,7 +17,7 @@ from enum import Enum
 from gpiozero import DigitalOutputDevice
 from gpiozero import Button
 import toml
-import threading
+import multiprocessing
 
 
 # GPIO PINS LADEN UIT DE CONFIG
@@ -77,14 +77,11 @@ def check_button(index):
             # Als de knop voor langer dan een halve seconde ingedrukt blijft
             if((get_elapsed_seconds(start_time)) >= 0.5):
                 print("Hold")
-
-                new_thread = threading.Thread(
+                new_process = multiprocessing.Process(
                                             target=update_relay,
                                             args=(relay, ButtonState.HOLD,),
-                                            daemon=True,
                                             name=("hold {}".format(relay.pin)))
-
-                new_thread.start()
+                new_process.start()
                 return ButtonState.HOLD
 
         # Timout waarin de knop 2 of 3 keer ingedrukt kan worden
@@ -92,38 +89,35 @@ def check_button(index):
             if(press_count[index] == 3):
                 print("Triple Press")
 
-                new_thread = threading.Thread(
+                new_process = multiprocessing.Process(
                                     target=update_relay,
                                     args=(relay, ButtonState.TRIPLE_PRESS,),
-                                    daemon=True,
                                     name=("triple press {}".format(relay.pin)))
 
-                new_thread.start()
+                new_process.start()
                 return ButtonState.TRIPLE_PRESS
 
         if(((get_elapsed_seconds(start_time)) >= timeout)):
             if(press_count[index] == 1):
                 print("One Press")
 
-                new_thread = threading.Thread(
+                new_process = multiprocessing.Process(
                                     target=update_relay,
                                     args=(relay, ButtonState.SINGLE_PRESS,),
-                                    daemon=True,
                                     name=("one press {}".format(relay.pin)))
 
-                new_thread.start()
+                new_process.start()
                 return ButtonState.SINGLE_PRESS
 
             if(press_count[index] == 2):
                 print("Double Press")
 
-                new_thread = threading.Thread(
+                new_process = multiprocessing.Process(
                                     target=update_relay,
                                     args=(relay, ButtonState.DOUBLE_PRESS,),
-                                    daemon=True,
                                     name=("double press {}".format(relay.pin)))
 
-                new_thread.start()
+                new_process.start()
                 return ButtonState.DOUBLE_PRESS
 
     return ButtonState.NOT_PRESSED
@@ -192,12 +186,12 @@ def temporary_toggle_relay(relay, seconds, warning=False, warning_time=0):
 # de relays na de opgegeven tijd een aantal seconden knipperen
 def temporary_toggle_all(seconds, warning=False, warning_time=0):
     for relay in relays:
-        new_thread = threading.Thread(
+        new_process = multiprocessing.Process(
                 target=temporary_toggle_relay,
                 args=(relay, seconds, warning, warning_time),
-                daemon=True, name='all on {}'.format(relay.pin))
+                name='all on {}'.format(relay.pin))
 
-        new_thread.start()
+        new_process.start()
 
 
 # Knippert een relay voor een aantal seconden
