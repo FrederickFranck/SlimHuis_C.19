@@ -83,12 +83,6 @@ def check_button(index):
                 print("Hold")
                 end_process(relay)
                 start_new_process(relay,ButtonState.HOLD)
-                '''new_process = multiprocessing.Process(
-                                            target=update_relay,
-                                            args=(relay, ButtonState.HOLD,),
-                                            name=("hold {}".format(relay.pin)))
-                process_list.append(new_process)
-                new_process.start()'''
                 return ButtonState.HOLD
 
         # Timout waarin de knop 2 of 3 keer ingedrukt kan worden
@@ -97,13 +91,6 @@ def check_button(index):
                 print("Triple Press")
                 end_process(relay)
                 start_new_process(relay,ButtonState.TRIPLE_PRESS)
-                '''new_process = multiprocessing.Process(
-                                    target=update_relay,
-                                    args=(relay, ButtonState.TRIPLE_PRESS,),
-                                    name=("triple press {}".format(relay.pin)))
-
-                process_list.append(new_process)
-                new_process.start()'''
                 return ButtonState.TRIPLE_PRESS
 
         if(((get_elapsed_seconds(start_time)) >= timeout)):
@@ -111,27 +98,12 @@ def check_button(index):
                 print("One Press")
                 end_process(relay)
                 start_new_process(relay,ButtonState.SINGLE_PRESS)
-                '''new_process = multiprocessing.Process(
-                                    target=update_relay,
-                                    args=(relay, ButtonState.SINGLE_PRESS,),
-                                    daemon=True,
-                                    name=("one press {}".format(relay.pin)))
-
-                process_list.append(new_process)
-                new_process.start()'''
                 return ButtonState.SINGLE_PRESS
 
             if(press_count[index] == 2):
                 print("Double Press")
                 end_process(relay)
                 start_new_process(relay,ButtonState.DOUBLE_PRESS)
-                '''new_process = multiprocessing.Process(
-                                    target=update_relay,
-                                    args=(relay, ButtonState.DOUBLE_PRESS,),
-                                    daemon=True,
-                                    name=("double press {}".format(relay.pin)))
-                process_list.append(new_process)
-                new_process.start()'''
                 return ButtonState.DOUBLE_PRESS
 
     return ButtonState.NOT_PRESSED
