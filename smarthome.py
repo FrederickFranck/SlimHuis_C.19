@@ -7,7 +7,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -33,6 +33,9 @@ relays = []
 # COUNTER
 # een lijst die voor elke knop het aantal knop drukken gaat bijhouden
 press_count = []
+
+# een lijst waar alle processen worden bijgehouden
+process_list = []
 
 
 # Maak een lijst aan met buttons en stelt de event handler functie in
@@ -69,55 +72,66 @@ def check_button(index):
     button = buttons[index]
     relay = relays[index]
     timeout = 1.5
+    hold_time = 0.5
     global press_count
     press_count[index] = 0
     if(button.is_pressed):
         start_time = now()
         while(button.is_pressed):
             # Als de knop voor langer dan een halve seconde ingedrukt blijft
-            if((get_elapsed_seconds(start_time)) >= 0.5):
+            if((get_elapsed_seconds(start_time)) >= hold_time):
                 print("Hold")
-                new_process = multiprocessing.Process(
+                end_process(relay)
+                start_new_process(relay,ButtonState.HOLD)
+                '''new_process = multiprocessing.Process(
                                             target=update_relay,
                                             args=(relay, ButtonState.HOLD,),
                                             name=("hold {}".format(relay.pin)))
-                new_process.start()
+                process_list.append(new_process)
+                new_process.start()'''
                 return ButtonState.HOLD
 
         # Timout waarin de knop 2 of 3 keer ingedrukt kan worden
         while((get_elapsed_seconds(start_time)) < timeout):
             if(press_count[index] == 3):
                 print("Triple Press")
-
-                new_process = multiprocessing.Process(
+                end_process(relay)
+                start_new_process(relay,ButtonState.TRIPLE_PRESS)
+                '''new_process = multiprocessing.Process(
                                     target=update_relay,
                                     args=(relay, ButtonState.TRIPLE_PRESS,),
                                     name=("triple press {}".format(relay.pin)))
 
-                new_process.start()
+                process_list.append(new_process)
+                new_process.start()'''
                 return ButtonState.TRIPLE_PRESS
 
         if(((get_elapsed_seconds(start_time)) >= timeout)):
             if(press_count[index] == 1):
                 print("One Press")
-
-                new_process = multiprocessing.Process(
+                end_process(relay)
+                start_new_process(relay,ButtonState.SINGLE_PRESS)
+                '''new_process = multiprocessing.Process(
                                     target=update_relay,
                                     args=(relay, ButtonState.SINGLE_PRESS,),
+                                    daemon=True,
                                     name=("one press {}".format(relay.pin)))
 
-                new_process.start()
+                process_list.append(new_process)
+                new_process.start()'''
                 return ButtonState.SINGLE_PRESS
 
             if(press_count[index] == 2):
                 print("Double Press")
-
-                new_process = multiprocessing.Process(
+                end_process(relay)
+                start_new_process(relay,ButtonState.DOUBLE_PRESS)
+                '''new_process = multiprocessing.Process(
                                     target=update_relay,
                                     args=(relay, ButtonState.DOUBLE_PRESS,),
+                                    daemon=True,
                                     name=("double press {}".format(relay.pin)))
-
-                new_process.start()
+                process_list.append(new_process)
+                new_process.start()'''
                 return ButtonState.DOUBLE_PRESS
 
     return ButtonState.NOT_PRESSED
@@ -189,8 +203,9 @@ def temporary_toggle_all(seconds, warning=False, warning_time=0):
         new_process = multiprocessing.Process(
                 target=temporary_toggle_relay,
                 args=(relay, seconds, warning, warning_time),
-                name='all on {}'.format(relay.pin))
-
+                daemon=True,
+                name=relay.pin)
+        process_list.append(new_process)
         new_process.start()
 
 
@@ -215,6 +230,23 @@ def switch_all_off():
     for relay in relays:
         if(relay.value):
             relay.off()
+
+# start een nieuw 'update_relay' process voor de meegegeven relay
+def start_new_process(relay,button_state):
+    new_process = multiprocessing.Process(
+                        target=update_relay,
+                        args=(relay, button_state,),
+                        daemon=True,
+                        name=relay.pin)
+    process_list.append(new_process)
+    new_process.start()
+
+# einidgt alle processen van de huidige relay
+def end_process(relay):
+    for process in process_list:
+            if(process.name == relay.pin):
+                process.kill()
+                process_list.remove(process)
 
 
 # Gaat voor elke knop nakijken of er gedrukt is
