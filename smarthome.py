@@ -7,7 +7,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -82,7 +82,7 @@ def check_button(index):
             if((get_elapsed_seconds(start_time)) >= hold_time):
                 print("Hold")
                 end_process(relay)
-                start_new_process(relay,ButtonState.HOLD)
+                start_new_process(relay, ButtonState.HOLD)
                 return ButtonState.HOLD
 
         # Timout waarin de knop 2 of 3 keer ingedrukt kan worden
@@ -90,20 +90,20 @@ def check_button(index):
             if(press_count[index] == 3):
                 print("Triple Press")
                 end_process(relay)
-                start_new_process(relay,ButtonState.TRIPLE_PRESS)
+                start_new_process(relay, ButtonState.TRIPLE_PRESS)
                 return ButtonState.TRIPLE_PRESS
 
         if(((get_elapsed_seconds(start_time)) >= timeout)):
             if(press_count[index] == 1):
                 print("One Press")
                 end_process(relay)
-                start_new_process(relay,ButtonState.SINGLE_PRESS)
+                start_new_process(relay, ButtonState.SINGLE_PRESS)
                 return ButtonState.SINGLE_PRESS
 
             if(press_count[index] == 2):
                 print("Double Press")
                 end_process(relay)
-                start_new_process(relay,ButtonState.DOUBLE_PRESS)
+                start_new_process(relay, ButtonState.DOUBLE_PRESS)
                 return ButtonState.DOUBLE_PRESS
 
     return ButtonState.NOT_PRESSED
@@ -203,22 +203,24 @@ def switch_all_off():
         if(relay.value):
             relay.off()
 
+
 # start een nieuw 'update_relay' process voor de meegegeven relay
-def start_new_process(relay,button_state):
+def start_new_process(relay, button_state):
     new_process = multiprocessing.Process(
                         target=update_relay,
                         args=(relay, button_state,),
-                        daemon=True,
                         name=relay.pin)
     process_list.append(new_process)
     new_process.start()
 
+
 # einidgt alle processen van de huidige relay
 def end_process(relay):
     for process in process_list:
-            if(process.name == relay.pin):
-                process.kill()
-                process_list.remove(process)
+        if(process.name == relay.pin):
+            print(process)
+            process.kill()
+            process_list.remove(process)
 
 
 # Gaat voor elke knop nakijken of er gedrukt is
