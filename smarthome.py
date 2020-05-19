@@ -7,7 +7,7 @@ het config.toml bestand
 '''
 
 __author__ = "Frédèrick Franck"
-__version__ = "1.2.4"
+__version__ = "1.3.0"
 __license__ = "MIT"
 __email__ = "frederick.franck@student.kdg.be"
 
@@ -89,7 +89,8 @@ def check_button(index):
         while((get_elapsed_seconds(start_time)) < timeout):
             if(press_count[index] == 3):
                 print("Triple Press")
-                end_process(relay)
+                end_all()
+                # end_process(relay)
                 start_new_process(relay, ButtonState.TRIPLE_PRESS)
                 return ButtonState.TRIPLE_PRESS
 
@@ -102,7 +103,8 @@ def check_button(index):
 
             if(press_count[index] == 2):
                 print("Double Press")
-                end_process(relay)
+                end_all()
+                # end_process(relay)
                 start_new_process(relay, ButtonState.DOUBLE_PRESS)
                 return ButtonState.DOUBLE_PRESS
 
@@ -175,7 +177,6 @@ def temporary_toggle_all(seconds, warning=False, warning_time=0):
         new_process = multiprocessing.Process(
                 target=temporary_toggle_relay,
                 args=(relay, seconds, warning, warning_time),
-                daemon=True,
                 name=relay.pin)
         process_list.append(new_process)
         new_process.start()
@@ -221,6 +222,13 @@ def end_process(relay):
             print(process)
             process.kill()
             process_list.remove(process)
+
+
+# Stopt alle processen van elke relay
+def end_all():
+    global relays
+    for relay in relays:
+        end_process(relay)
 
 
 # Gaat voor elke knop nakijken of er gedrukt is
